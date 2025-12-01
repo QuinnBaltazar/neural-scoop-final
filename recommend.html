@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Flavor Maker – Neural Scoop</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="menu.html">Menu</a>
+      <a href="recommend.html" class="active">AI Flavor Maker</a>
+      <a href="data.html">Data</a>
+      <a href="maker.html">Ice Cream Maker</a>
+      <a href="profile.html">Your Flavor Profile</a>
+    </nav>
+  </header>
+
+  <section class="page-header">
+    <h1>AI Flavor Maker</h1>
+    <p>Tell us what you like and the AI will craft your perfect scoop.</p>
+    <div style="margin-top:10px;">
+      <a class="menu-add" href="profile.html">View your Flavor Profile</a>
+    </div>
+  </section>
+
+  <main class="ai-layout">
+    <div class="ai-card">
+      <h2>Answer a few quick questions</h2>
+      <a class="menu-add" href="profile.html" style="display:inline-block;margin-bottom:10px;">View your Flavor Profile</a>
+      <form id="ai-form">
+        <label>Pick your vibe
+          <select name="vibe">
+            <option value="classic">Classic & cozy</option>
+            <option value="rich">Rich & chocolatey</option>
+            <option value="fresh">Fresh & fruity</option>
+            <option value="bright">Bright & minty</option>
+            <option value="adventurous">Adventurous & sweet-salty</option>
+            <option value="nutty">Nutty & toasty</option>
+          </select>
+        </label>
+
+        <label>Sweetness level
+          <div class="ai-options">
+            <label><input type="radio" name="sweet" value="low" checked> Light</label>
+            <label><input type="radio" name="sweet" value="med"> Balanced</label>
+            <label><input type="radio" name="sweet" value="high"> Sweet tooth</label>
+          </div>
+        </label>
+
+        <label>Preferred base
+          <div class="ai-options">
+            <label><input type="radio" name="base" value="waffle" checked> Waffle Cone</label>
+            <label><input type="radio" name="base" value="sugar"> Sugar Cone</label>
+            <label><input type="radio" name="base" value="bowl"> Waffle bowl</label>
+            <label><input type="radio" name="base" value="cup"> Cup</label>
+          </div>
+        </label>
+
+        <label>Number of scoops
+          <div class="ai-options">
+            <label><input type="radio" name="scoops" value="1" checked> 1</label>
+            <label><input type="radio" name="scoops" value="2"> 2</label>
+          </div>
+        </label>
+
+        <label>Texture you crave
+          <div class="ai-options">
+            <label><input type="radio" name="texture" value="smooth" checked> Smooth</label>
+            <label><input type="radio" name="texture" value="chunky"> Chunky bits</label>
+            <label><input type="radio" name="texture" value="chewy"> Chewy mix-ins</label>
+          </div>
+        </label>
+
+        <label>Favorite topping type
+          <div class="ai-options">
+            <label><input type="radio" name="toppingType" value="saucy" checked> Saucy</label>
+            <label><input type="radio" name="toppingType" value="chocolaty"> Chocolaty</label>
+            <label><input type="radio" name="toppingType" value="candy"> Candy</label>
+          </div>
+        </label>
+
+        <label>Flavor intensity
+          <div class="ai-options">
+            <label><input type="radio" name="intensity" value="light" checked> Light & airy</label>
+            <label><input type="radio" name="intensity" value="bold"> Bold & decadent</label>
+          </div>
+        </label>
+
+        <button type="submit" class="shop-primary full">Generate My Flavor</button>
+      </form>
+    </div>
+
+    <div class="ai-result">
+      <div class="ai-result-card" id="ai-result-card">
+        <p class="shop-modal-overline">Your AI pick</p>
+        <h2 id="ai-flavor-name">Tell us your vibe</h2>
+        <p id="ai-flavor-desc" class="ai-desc">Answer the questions to get a tailored recommendation.</p>
+        <div id="ai-flavor-bits" class="ai-bits"></div>
+        <button class="menu-add" id="ai-add-cart" style="display:none">Add to Cart</button>
+        <div class="ai-3d-card">
+          <canvas id="ai-3d-canvas"></canvas>
+        </div>
+        <div class="ai-feedback" id="ai-feedback">
+          <p class="ai-desc">Feedback</p>
+          <div class="ai-feedback-actions">
+            <button id="ai-less" class="menu-add" type="button">Less toppings</button>
+            <button id="ai-more" class="menu-add" type="button">More toppings</button>
+            <button id="ai-change-flavor" class="menu-add" type="button">Change flavor</button>
+            <button id="ai-change-base" class="menu-add" type="button">Change base</button>
+            <button id="ai-like" class="shop-primary" type="button">I like it</button>
+          </div>
+          <div id="ai-feedback-form" style="display:none;">
+            <div id="ai-chip-container" class="ai-chip-group"></div>
+            <label class="ai-desc">Optional notes:</label>
+            <textarea id="ai-feedback-text" placeholder="Type the flavor/base/toppings you want."></textarea>
+            <button id="ai-retry" class="shop-primary full" type="button">Re-generate with feedback</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="shop.js"></script>
+  <script src="three.min.js"></script>
+  <script src="OrbitControls.js"></script>
+  <script>
+    const allowedToppings = ["Sprinkles", "Hot Fudge", "Whipped Cream", "Cherries", "Oreo Crumbles", "Caramel", "M&Ms", "Chocolate Chips", "Marshmallows"];
+
+    // Menu-aligned flavor set (use only current menu flavors + toppings)
+    const flavorProfiles = [
+      {
+        name: "Vanilla Bean",
+        desc: "Classic vanilla bean with a warm hot fudge ribbon.",
+        base: "Cup",
+        scoops: 1,
+        toppings: ["Hot Fudge", "Whipped Cream"],
+        tags: ["classic", "smooth", "warm", "light", "sauce", "saucy"]
+      },
+      {
+        name: "Rainbow Sherbet",
+        desc: "Tart citrus trio swirled into one colorful scoop.",
+        base: "Cup",
+        scoops: 1,
+        toppings: ["Cherries"],
+        tags: ["fresh", "bright", "light", "candy"]
+      },
+      {
+        name: "Rocky Road",
+        desc: "Chocolate ice cream with marshmallows and crunch.",
+        base: "Waffle Cone",
+        scoops: 2,
+        toppings: ["Oreo Crumbles", "Marshmallows", "Chocolate Chips"],
+        tags: ["rich", "chunky", "sweet", "chocolaty"]
+      },
+      {
+        name: "Mango",
+        desc: "Bright and juicy mango puree in a creamy base.",
+        base: "Cup",
+        scoops: 1,
+        toppings: ["Cherries"],
+        tags: ["fresh", "bright", "smooth", "light", "fruity", "candy"]
+      },
+      {
+        name: "Cookies and Cream",
+        desc: "Vanilla cream loaded with chocolate cookie pieces.",
+        base: "Waffle Bowl",
+        scoops: 2,
+        toppings: ["Oreo Crumbles"],
+        tags: ["classic", "chunky", "sweet", "chocolaty"]
+      },
+      {
+        name: "Pistachio",
+        desc: "Nutty roasted pistachio in a silky green cream.",
+        base: "Cup",
+        scoops: 1,
+        toppings: ["Sprinkles"],
+        tags: ["nutty", "smooth", "light"]
+      },
+      {
+        name: "Pineapple Coconut",
+        desc: "Tropical pineapple blended with creamy coconut.",
+        base: "Waffle Bowl",
+        scoops: 1,
+        toppings: ["Sprinkles"],
+        tags: ["fresh", "bright", "smooth", "light", "candy"]
+      },
+      {
+        name: "Rich Chocolate",
+        desc: "Chocolate overload with brownie crunch and fudge drizzle.",
+        base: "Waffle Cone",
+        scoops: 2,
+        toppings: ["Hot Fudge", "Oreo Crumbles"],
+        tags: ["rich", "chunky", "warm", "sweet", "sauce", "chocolaty", "saucy"]
+      },
+      {
+        name: "Mint Chip",
+        desc: "Cool mint chip with extra dark flakes.",
+        base: "Waffle Cone",
+        scoops: 1,
+        toppings: ["Oreo Crumbles"],
+        tags: ["bright", "cool", "smooth", "light", "crunch"]
+      },
+      {
+        name: "Strawberry",
+        desc: "Strawberry swirls with real fruit and a light cream finish.",
+        base: "Waffle Bowl",
+        scoops: 2,
+        toppings: ["Cherries", "Whipped Cream"],
+        tags: ["fresh", "smooth", "cool", "light", "fruity", "candy"]
+      },
+      {
+        name: "Cookie Dough",
+        desc: "Brown sugar ice cream with cookie dough bits.",
+        base: "Cup",
+        scoops: 2,
+        toppings: ["Oreo Crumbles", "Whipped Cream"],
+        tags: ["chunky", "adventurous", "warm", "sweet", "crunch", "chocolaty"]
+      },
+      {
+        name: "Weekly Special",
+        desc: "Chef’s rotating pick with a balanced topping set.",
+        base: "Waffle Bowl",
+        scoops: 1,
+        toppings: ["Sprinkles", "Whipped Cream"],
+        tags: ["classic", "smooth", "light"]
+      }
+    ];
+
+    // ==== lightweight learned model (perceptron-style) ====
+    const modelKey = "ns_ai_weights_v1";
+    let modelWeights = {};
+
+    const surveyHistoryKey = "ns_survey_history";
+
+    function resetModel() {
+      modelWeights = {};
+      try {
+        localStorage.removeItem(modelKey);
+      } catch (e) {
+        // ignore
+      }
+      flavorProfiles.forEach(fp => {
+        modelWeights[fp.name] = {};
+      });
+    }
+
+    function saveModel() {
+      try {
+        localStorage.setItem(modelKey, JSON.stringify(modelWeights));
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    function appendSurveyHistory(entry) {
+      try {
+        const raw = localStorage.getItem(surveyHistoryKey);
+        const hist = raw ? JSON.parse(raw) : [];
+        hist.push({ ...entry, ts: Date.now() });
+        localStorage.setItem(surveyHistoryKey, JSON.stringify(hist.slice(-20)));
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    resetModel();
+
+    function featureKeysFromSample(sample) {
+      const keys = [];
+      ["vibe", "sweet", "texture", "base", "topping", "toppingType", "intensity", "menuFlavor"].forEach(k => {
+        if (sample[k]) keys.push(`${k}:${sample[k]}`);
+      });
+      (sample.textHints || []).forEach(h => keys.push(`hint:${h}`));
+      return keys;
+    }
+
+    function softmax(scores) {
+      const max = Math.max(...scores);
+      const exp = scores.map(s => Math.exp(s - max));
+      const sum = exp.reduce((a, b) => a + b, 0);
+      return exp.map(e => e / sum);
+    }
+
+    function trainModel(samples, epochs = 50, lr = 0.05) {
+      if (!samples.length) return;
+      const flavorNames = flavorProfiles.map(fp => fp.name);
+      for (let ep = 0; ep < epochs; ep++) {
+        samples.forEach(sample => {
+          const feats = featureKeysFromSample(sample);
+          const dots = flavorNames.map(name => {
+            const w = modelWeights[name] || {};
+            return feats.reduce((sum, f) => sum + (w[f] || 0), 0);
+          });
+          const probs = softmax(dots);
+          const targetIdx = Math.max(flavorNames.indexOf(sample.label), 0);
+          flavorNames.forEach((name, idx) => {
+            const error = (idx === targetIdx ? 1 : 0) - probs[idx];
+            const w = modelWeights[name] || {};
+            feats.forEach(f => {
+              w[f] = (w[f] || 0) + lr * error;
+            });
+            modelWeights[name] = w;
+          });
+        });
+      }
+      saveModel();
+    }
+
+    function modelScore(flavorName, answers) {
+      const feats = featureKeysFromSample(answers);
+      const w = modelWeights[flavorName] || {};
+      return feats.reduce((sum, f) => sum + (w[f] || 0), 0);
+    }
+
+    function buildTrainingSamples() {
+      const samples = [];
+      // from survey history
+      try {
+        const raw = localStorage.getItem("ns_survey_history");
+        const hist = raw ? JSON.parse(raw) : [];
+        hist.forEach(entry => {
+          const label = entry.menuFlavor || entry.favoriteText || entry.favorite;
+          const matched = flavorProfiles.find(fp =>
+            label && fp.name.toLowerCase().includes(label.toLowerCase().split(" ")[0])
+          );
+          if (matched) {
+            samples.push({
+              label: matched.name,
+              vibe: entry.favorite,
+              sweet: entry.sweet,
+              texture: entry.texture,
+              base: entry.base,
+              topping: (entry.toppings && entry.toppings[0]) || null,
+              intensity: entry.intensity,
+              menuFlavor: entry.menuFlavor,
+              textHints: []
+            });
+          }
+        });
+      } catch (e) {
+        // ignore
+      }
+      // from cart history
+      const prefStats = (window.getPreferenceStats && window.getPreferenceStats()) || { flavors: {} };
+      Object.entries(prefStats.flavors || {}).forEach(([name, count]) => {
+        const matched = flavorProfiles.find(fp => fp.name.toLowerCase() === name);
+        if (matched) {
+          samples.push({
+            label: matched.name,
+            vibe: "classic",
+            sweet: "med",
+            texture: "smooth",
+            base: matched.base.toLowerCase().includes("cone") ? "cone" : matched.base.toLowerCase().includes("bowl") ? "bowl" : "cup",
+            topping: (matched.toppings && matched.toppings[0]) || null,
+            intensity: "light",
+            menuFlavor: matched.name,
+            textHints: [],
+            weight: count
+          });
+        }
+      });
+      return samples;
+    }
+
+    const vibeBias = {
+      classic: ["Vanilla Bean", "Rich Chocolate"],
+      rich: ["Rocky Road", "Cookie Dough", "Rich Chocolate", "Cookies and Cream"],
+      fresh: ["Mango", "Pistachio", "Pineapple Coconut", "Strawberry", "Rainbow Sherbet"],
+      bright: ["Mint Chip", "Pineapple Coconut", "Mango"],
+      adventurous: ["Rocky Road", "Rainbow Sherbet", "Weekly Special"],
+      nutty: ["Rich Chocolate", "Cookie Dough", "Rocky Road", "Cookies and Cream", "Pistachio"]
+    };
+
+    function scoreFlavor(answers, flavor, history, prefStats = { bases: {}, toppings: {} }) {
+      let score = 0;
+      score += modelScore(flavor.name, answers);
+      if (flavor.tags.includes(answers.vibe)) score += 2.2;
+      if (flavor.tags.includes(answers.texture)) score += 2.2;
+      if (answers.sweet === "high" && flavor.tags.includes("sweet")) score += 0.8;
+      if (answers.sweet === "low" && flavor.tags.includes("light")) score += 0.8;
+      if (answers.topping && flavor.tags.includes(answers.topping)) score += 0.9;
+      if (answers.toppingType && flavor.tags.includes(answers.toppingType)) score += 1.0;
+      if (answers.intensity === "bold" && flavor.tags.includes("rich")) score += 0.6;
+      if (answers.intensity === "light" && flavor.tags.includes("light")) score += 0.6;
+      if (answers.favorite && flavor.tags.includes(answers.favorite)) score += 1.0;
+      if (answers.menuFlavor && flavor.name === answers.menuFlavor) score += 2.0;
+      const biasList = vibeBias[answers.vibe] || [];
+      if (biasList.some(f => f === flavor.name)) score += 3.5;
+      if (answers.basePref && flavor.base && answers.basePref === flavor.base.toLowerCase().split(" ")[1]) score += 0.5;
+      if (answers.surveyTexture && flavor.tags.includes(answers.surveyTexture)) score += 0.5;
+      answers.textHints.forEach(h => {
+        if (flavor.tags.includes(h)) score += 0.7;
+      });
+      if (answers.toppingType) {
+        const typeMatch = {
+          saucy: ["Caramel", "Hot Fudge", "Whipped Cream"],
+          chocolaty: ["Chocolate Chips", "Oreo Crumbles", "M&Ms"],
+          candy: ["Sprinkles", "Cherries", "Marshmallows"]
+        };
+        const tops = flavor.toppings || [];
+        const preferred = typeMatch[answers.toppingType] || [];
+        const hits = tops.filter(t => preferred.includes(t)).length;
+        score += hits * 1.1;
+        if (answers.toppingType === "candy") {
+          const chocoHits = tops.filter(t => typeMatch.chocolaty.includes(t)).length;
+          score += chocoHits * 0.4;
+        }
+      }
+      // Feedback (highest priority)
+      if (answers.feedbackFlavor && flavor.name === answers.feedbackFlavor) score += 4.0;
+      (answers.feedbackAdd || []).forEach(t => {
+        if ((flavor.toppings || []).includes(t)) score += 1.0;
+      });
+      (answers.feedbackRemove || []).forEach(t => {
+        if ((flavor.toppings || []).includes(t)) score -= 2.0;
+      });
+      // learned preferences for bases and toppings from cart history
+      const baseKey = (flavor.base || "").toLowerCase();
+      const baseSeen = prefStats.bases[baseKey] || 0;
+      score += Math.min(baseSeen, 5) * 0.5;
+      (flavor.toppings || []).forEach(t => {
+        const tk = t.toLowerCase();
+        const seen = prefStats.toppings[tk] || 0;
+        score += Math.min(seen, 5) * 0.35;
+      });
+      // learned preference from purchase history
+      const histCount = history[flavor.name.toLowerCase()] || 0;
+      score += Math.min(histCount, 5) * 0.9;
+      // small randomness to avoid always the same pick
+      score += Math.random() * 0.6;
+      return score;
+    }
+
+    function pickFlavor(rankedList) {
+      if (!rankedList.length) return flavorProfiles[0];
+      const top = rankedList.slice(0, 4); // consider top 4 for variety
+      const maxScore = top[0].score;
+      const weights = top.map(item => Math.exp((item.score - maxScore) * 0.4)); // temperature for spread
+      const sum = weights.reduce((a, b) => a + b, 0);
+      let r = Math.random() * sum;
+      for (let i = 0; i < top.length; i++) {
+        r -= weights[i];
+        if (r <= 0) return top[i].fp;
+      }
+      return top[0].fp;
+    }
+
+    function pickToppings(answers, baseToppings = []) {
+      const allowed = ["Sprinkles", "Hot Fudge", "Whipped Cream", "Cherries", "Oreo Crumbles", "Caramel", "M&Ms", "Chocolate Chips", "Marshmallows"];
+      const typeMap = {
+        saucy: ["Caramel", "Hot Fudge", "Whipped Cream"],
+        chocolaty: ["Chocolate Chips", "Oreo Crumbles", "M&Ms"],
+        candy: ["Sprinkles", "Cherries", "Marshmallows"]
+      };
+      const list = Array.isArray(baseToppings) ? [...baseToppings] : [];
+      const pref = typeMap[answers.toppingType] || [];
+      pref.forEach(t => { if (!list.includes(t)) list.push(t); });
+      if (answers.toppingType === "candy") {
+        // slight chocolaty boost
+        const choco = typeMap.chocolaty[0];
+        if (!list.includes(choco)) list.push(choco);
+      }
+      return list.filter(t => allowed.includes(t));
+    }
+
+    function renderResult(flavor, answers, toppingsOverride = null) {
+      const nameEl = document.getElementById("ai-flavor-name");
+      const descEl = document.getElementById("ai-flavor-desc");
+      const bitsEl = document.getElementById("ai-flavor-bits");
+      const addBtn = document.getElementById("ai-add-cart");
+      const feedback = document.getElementById("ai-feedback");
+      const fbForm = document.getElementById("ai-feedback-form");
+      const fbText = document.getElementById("ai-feedback-text");
+
+      nameEl.textContent = flavor.name;
+      const resolvedToppings = toppingsOverride !== null
+        ? toppingsOverride
+        : pickToppings(answers, flavor.toppings || []);
+      const filteredToppings = resolvedToppings.filter(t => allowedToppings.includes(t));
+      descEl.textContent = `${flavor.desc} Toppings: ${filteredToppings.join(", ") || "None"}.`;
+      const baseLabel = resolveBase(answers.base, flavor.base);
+      bitsEl.innerHTML = `
+        <span class="badge new">${answers.vibe}</span>
+        <span class="badge seasonal">${answers.texture}</span>
+        <span class="badge bestseller">${baseLabel}</span>
+        ${answers.topping ? `<span class="badge seasonal">${answers.topping}</span>` : ""}
+      `;
+      addBtn.style.display = "inline-block";
+      addBtn.onclick = () => {
+        addToCart({
+          name: `${flavor.name} (AI Pick)`,
+          base: baseLabel,
+          scoops: answers.scoops || flavor.scoops || 1,
+          toppings: filteredToppings,
+          notes: `AI vibe: ${answers.vibe}, texture: ${answers.texture}`,
+          price: 4.5
+        });
+      };
+
+      // render 3D view
+      lastToppings = filteredToppings;
+      renderFlavor3D(flavor, answers, filteredToppings);
+      lastAnswers = answers;
+      lastFlavor = flavor;
+      feedbackAction = null;
+      feedback.style.display = "flex";
+      fbForm.style.display = "none";
+      fbText.value = "";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("ai-form");
+      form.addEventListener("submit", e => {
+        e.preventDefault();
+        resetModel();
+        trainModel(buildTrainingSamples());
+        const data = new FormData(form);
+        const answers = {
+          vibe: data.get("vibe"),
+          sweet: data.get("sweet"),
+          texture: data.get("texture"),
+          base: data.get("base"),
+          scoops: Number(data.get("scoops") || 1),
+          topping: data.get("topping"),
+          toppingType: data.get("toppingType"),
+          intensity: data.get("intensity"),
+          favorite: null,
+          menuFlavor: null,
+          basePref: null,
+          surveyTexture: null,
+          textHints: [],
+          feedbackFlavor: null,
+          feedbackAdd: [],
+          feedbackRemove: []
+        };
+        const surveyRaw = localStorage.getItem("ns_survey_prefs");
+        if (surveyRaw) {
+          try {
+            const survey = JSON.parse(surveyRaw);
+            answers.favorite = survey.favorite;
+            answers.menuFlavor = survey.menuFlavor;
+            answers.basePref = survey.base;
+            answers.surveyTexture = survey.texture;
+            // If user picked topping styles in survey, prefer them
+            if (!answers.topping && survey.toppings?.length) {
+              answers.topping = survey.toppings[0];
+            }
+            if (!answers.sweet && survey.sweet) {
+              answers.sweet = survey.sweet;
+            }
+            if (survey.favoriteText) {
+              const txt = survey.favoriteText.toLowerCase();
+              if (txt.includes("mint")) answers.textHints.push("bright");
+              if (txt.includes("chocolate")) answers.textHints.push("rich");
+              if (txt.includes("straw") || txt.includes("berry")) answers.textHints.push("fresh");
+              if (txt.includes("vanilla")) answers.textHints.push("classic");
+              if (txt.includes("cookie")) answers.textHints.push("chunky");
+              if (txt.includes("caramel") || txt.includes("fudge")) answers.textHints.push("warm");
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+        const history = (window.getFlavorHistory && window.getFlavorHistory()) || {};
+        const prefStats = (window.getPreferenceStats && window.getPreferenceStats()) || { bases: {}, toppings: {} };
+      const ranked = flavorProfiles
+        .map(fp => ({ fp, score: scoreFlavor(answers, fp, history, prefStats) }))
+        .sort((a, b) => b.score - a.score);
+      const best = pickFlavor(ranked);
+      renderResult(best, answers);
+    });
+
+      const likeBtn = document.getElementById("ai-like");
+      const lessBtn = document.getElementById("ai-less");
+      const moreBtn = document.getElementById("ai-more");
+      const changeFlavorBtn = document.getElementById("ai-change-flavor");
+      const changeBaseBtn = document.getElementById("ai-change-base");
+      const fbForm = document.getElementById("ai-feedback-form");
+      const fbText = document.getElementById("ai-feedback-text");
+      const retryBtn = document.getElementById("ai-retry");
+      const chipContainer = document.getElementById("ai-chip-container");
+
+      if (likeBtn) {
+        likeBtn.addEventListener("click", () => {
+          requeryCount = 0;
+          // reinforce current flavor in model
+          if (lastFlavor && lastAnswers) {
+            trainModel([{ ...lastAnswers, label: lastFlavor.name }], 10, 0.05);
+            const baseLabel = resolveBase(lastAnswers.base, lastFlavor.base);
+            appendSurveyHistory({
+              favorite: lastAnswers.vibe,
+              menuFlavor: lastFlavor.name,
+              base: baseLabel.toLowerCase().includes("cone") ? "cone" : baseLabel.toLowerCase().includes("bowl") ? "bowl" : "cup",
+              toppings: lastToppings || [],
+              sweet: lastAnswers.sweet,
+              texture: lastAnswers.texture,
+              notes: "Liked AI pick"
+            });
+            addToCart({
+              name: `${lastFlavor.name} (AI Pick)`,
+              base: baseLabel,
+              scoops: lastAnswers.scoops || lastFlavor.scoops || 1,
+              toppings: lastToppings || [],
+              notes: `AI vibe: ${lastAnswers.vibe}, texture: ${lastAnswers.texture}`,
+              price: 4.5
+            });
+          }
+        });
+      }
+
+      function setFeedback(action) {
+        feedbackAction = action;
+        fbForm.style.display = "block";
+        chipContainer.innerHTML = "";
+        const chips = [];
+        if (action === "ai-less") {
+          (lastToppings || []).forEach(t => chips.push({ label: t, value: t }));
+        }
+        if (action === "ai-more") {
+          const missing = allToppings.filter(t => !(lastToppings || []).includes(t));
+          missing.forEach(t => chips.push({ label: t, value: t }));
+        }
+        if (action === "ai-change-flavor") {
+          allFlavors.forEach(f => chips.push({ label: f, value: f }));
+        }
+        if (action === "ai-change-base") {
+          [
+            { label: "Waffle Cone", value: "waffle" },
+            { label: "Sugar Cone", value: "sugar" },
+            { label: "Waffle Bowl", value: "bowl" },
+            { label: "Cup", value: "cup" }
+          ].forEach(b => chips.push(b));
+        }
+
+        chips.forEach(c => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "ai-chip";
+          btn.textContent = c.label;
+          btn.dataset.value = c.value;
+          btn.addEventListener("click", () => {
+            btn.classList.toggle("selected");
+          });
+          chipContainer.appendChild(btn);
+        });
+      }
+
+      [lessBtn, moreBtn, changeFlavorBtn, changeBaseBtn].forEach(btn => {
+        if (!btn) return;
+        btn.addEventListener("click", () => {
+          setFeedback(btn.id);
+        });
+      });
+
+      if (retryBtn) {
+        retryBtn.addEventListener("click", () => {
+          if (!lastAnswers) return;
+          const tweak = fbText.value.toLowerCase();
+          const tweaked = { ...lastAnswers };
+          if (tweak.includes("chocolate")) tweaked.vibe = "rich";
+          if (tweak.includes("mint")) tweaked.vibe = "bright";
+          if (tweak.includes("fruit") || tweak.includes("berry")) tweaked.vibe = "fresh";
+          if (tweak.includes("less sweet")) tweaked.sweet = "low";
+          if (tweak.includes("more sweet")) tweaked.sweet = "high";
+          if (tweak.includes("sauce") || tweak.includes("fudge") || tweak.includes("caramel")) tweaked.toppingType = "saucy";
+          if (tweak.includes("chocolate")) tweaked.toppingType = "chocolaty";
+          if (tweak.includes("candy") || tweak.includes("m&m") || tweak.includes("m&amp;m")) tweaked.toppingType = "candy";
+
+          // preset adjustments from feedback buttons
+          const selectedChips = Array.from(document.querySelectorAll(".ai-chip.selected")).map(b => b.dataset.value);
+          if (feedbackAction === "ai-less") {
+            tweaked.feedbackRemove = selectedChips;
+          }
+          if (feedbackAction === "ai-more") {
+            tweaked.feedbackAdd = selectedChips;
+          }
+          if (feedbackAction === "ai-change-base") {
+            const pickedBase = selectedChips[0];
+            if (pickedBase) {
+              if (pickedBase === "waffle") tweaked.base = "waffle";
+              else if (pickedBase === "sugar") tweaked.base = "sugar";
+              else if (pickedBase === "bowl") tweaked.base = "bowl";
+              else if (pickedBase === "cup") tweaked.base = "cup";
+              else {
+                const lower = pickedBase.toLowerCase();
+                if (lower.includes("sugar")) tweaked.base = "sugar";
+                else if (lower.includes("waffle") || lower.includes("cone")) tweaked.base = "waffle";
+                else if (lower.includes("bowl")) tweaked.base = "bowl";
+                else if (lower.includes("cup")) tweaked.base = "cup";
+              }
+            }
+          }
+          requeryCount += 1;
+
+          const toppingNames = ["sprinkles","hot fudge","whipped cream","cherries","oreo crumbles","caramel","m&ms","m&amp;ms","chocolate chips","marshmallows"];
+          const flavorNames = flavorProfiles.map(fp => fp.name.toLowerCase());
+          let forcedFlavor = null;
+          const addTops = new Set();
+          const removeTops = new Set();
+
+          // integrate chip selections for add/remove
+          if (feedbackAction === "ai-less") {
+            selectedChips.forEach(t => removeTops.add(t.replace("&amp;","&")));
+          }
+          if (feedbackAction === "ai-more") {
+            selectedChips.forEach(t => addTops.add(t.replace("&amp;","&")));
+          }
+
+          toppingNames.forEach(t => {
+            if (!tweak.includes(t)) return;
+            const negative = tweak.includes("no "+t) || tweak.includes("without "+t) || tweak.includes("less "+t);
+            const positive = tweak.includes("more "+t) || tweak.includes("add "+t) || tweak.includes("extra "+t) || tweak.includes("want "+t);
+            const clean = t.replace("&amp;","&");
+            if (negative) removeTops.add(clean);
+            if (positive || (!negative && tweak.includes(t))) addTops.add(clean);
+          });
+
+          const matchedFlavors = [];
+          flavorNames.forEach(fname => {
+            if (tweak.includes(fname)) {
+              const found = flavorProfiles.find(fp => fp.name.toLowerCase() === fname);
+              if (found) matchedFlavors.push(found);
+            }
+          });
+          if (feedbackAction === "ai-change-flavor" && selectedChips[0]) {
+            const match = flavorProfiles.find(fp => fp.name.toLowerCase() === selectedChips[0].toLowerCase());
+            if (match) forcedFlavor = match;
+          } else if (matchedFlavors.length) {
+            forcedFlavor = matchedFlavors[0];
+          }
+
+          // reset model before re-scoring to avoid accumulation
+          resetModel();
+          trainModel(buildTrainingSamples());
+          // nudge flavor model randomness by adding noise proportional to requeryCount
+          const history = (window.getFlavorHistory && window.getFlavorHistory()) || {};
+          const prefStats = (window.getPreferenceStats && window.getPreferenceStats()) || { bases: {}, toppings: {} };
+          const ranked = flavorProfiles
+            .map(fp => ({ fp, score: scoreFlavor(tweaked, fp, history, prefStats) + Math.random() * (0.5 + 0.2 * requeryCount) }))
+            .sort((a, b) => b.score - a.score);
+
+          let chosen = forcedFlavor || lastFlavor || ranked[0].fp;
+          const baseTops =
+            (Array.isArray(lastToppings) && lastToppings.length)
+              ? [...lastToppings]
+              : (Array.isArray(chosen.toppings) ? [...chosen.toppings] : []);
+          let filtered = baseTops.filter(t => !removeTops.has(t));
+          addTops.forEach(t => {
+            const proper = allowedToppings.find(x => x.toLowerCase() === t.toLowerCase());
+            if (proper && !filtered.includes(proper)) filtered.push(proper);
+          });
+          if (feedbackAction === "ai-less" && selectedChips.length === 0) {
+            // explicit clear when user chose "less" without selecting specific chips
+            filtered = [];
+          } else if (feedbackAction === "ai-less" && selectedChips.length) {
+            const lowerSelected = selectedChips.map(s => s.toLowerCase());
+            const allRemoved = baseTops.every(t => lowerSelected.includes(t.toLowerCase()));
+            if (allRemoved) filtered = [];
+          }
+
+          const baseMap = {
+            cone: "Waffle Cone",
+            waffle: "Waffle Cone",
+            sugar: "Sugar Cone",
+            bowl: "Waffle Bowl",
+            cup: "Cup"
+          };
+          const pickedBaseLabel = tweaked.base && baseMap[tweaked.base] ? baseMap[tweaked.base] : chosen.base;
+          chosen = { ...chosen, base: pickedBaseLabel, toppings: filtered };
+
+          tweaked.feedbackFlavor = forcedFlavor ? forcedFlavor.name : null;
+          tweaked.feedbackAdd = Array.from(addTops).map(t => t.replace("&amp;","&"));
+          tweaked.feedbackRemove = Array.from(removeTops).map(t => t.replace("&amp;","&"));
+
+          renderResult(chosen, tweaked, filtered);
+        });
+      }
+    });
+
+    // ============ SIMPLE 3D RENDERER FOR AI PICK ============
+    let aiRenderer, aiScene, aiCamera, aiControls, aiAnim;
+    const aiCanvas = document.getElementById("ai-3d-canvas");
+    let lastAnswers = null;
+    let lastFlavor = null;
+    let requeryCount = 0;
+    let lastToppings = [];
+    let feedbackAction = null;
+    const allToppings = ["Sprinkles", "Hot Fudge", "Whipped Cream", "Cherries", "Oreo Crumbles", "Caramel", "M&Ms", "Chocolate Chips", "Marshmallows"];
+    const allFlavors = flavorProfiles.map(fp => fp.name);
+
+    function resolveBase(baseCode, flavorBase) {
+      const baseMap = {
+        waffle: "Waffle Cone",
+        sugar: "Sugar Cone",
+        bowl: "Waffle Bowl",
+        cone: "Waffle Cone",
+        cup: "Cup"
+      };
+      if (baseCode && baseMap[baseCode]) return baseMap[baseCode];
+      return flavorBase || "Cup";
+    }
+
+    // borrowed texture helpers from maker scene
+    function createWaffleTexture({ base = "#b5732f", lines = "#dca766", spacing = 12 }) {
+      const size = 128;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = lines;
+      ctx.lineWidth = 4;
+
+      for (let x = -spacing; x < size + spacing; x += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + size, size);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x + spacing / 2, 0);
+        ctx.lineTo(x + spacing / 2 - size, size);
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(3, 3);
+      return texture;
+    }
+
+    function createStripedCupTexture() {
+      const size = 128;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = "#f8f8f6";
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = "#d8d8d5";
+
+      for (let x = 0; x < size; x += 14) {
+        ctx.fillRect(x, 0, 6, size);
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2.5, 1.5);
+      return texture;
+    }
+
+    const waffleTexture = createWaffleTexture({ base: "#9a5b22", lines: "#d19c63", spacing: 10 });
+    const sugarTexture = createWaffleTexture({ base: "#c68c44", lines: "#ebc78e", spacing: 14 });
+    const cupTexture = createStripedCupTexture();
+
+    function flavorToColor(name) {
+      const map = {
+        vanilla: 0xf9ead1,
+        chocolate: 0x6b4226,
+        strawberry: 0xf7a0b2,
+        mint: 0x85e0b6,
+        cookie: 0xf5d5a4,
+        lemon: 0xf8f1c6,
+        espresso: 0x4b3621,
+        caramel: 0xd7a86e,
+        coconut: 0xe9f7f4,
+        mango: 0xf7c56a,
+        pistachio: 0xc9e3b5,
+        pineapple: 0xf7e7a4,
+        sherbet: 0xffc2c2,
+        rocky: 0x5a3a2a,
+        cookies: 0xf2f0ea
+      };
+      const key = name.toLowerCase();
+      for (const k in map) {
+        if (key.includes(k)) return map[k];
+      }
+      // fallback: hash the name to a pastel color
+      let hash = 0;
+      for (let i = 0; i < key.length; i++) {
+        hash = key.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const r = (hash & 0xff0000) >> 16;
+      const g = (hash & 0x00ff00) >> 8;
+      const b = hash & 0x0000ff;
+      return (0xd0 << 16) | ((g + 128) & 0xff) << 8 | ((b + 128) & 0xff);
+    }
+
+    function createScoop(color) {
+      const geom = new THREE.SphereGeometry(1.1, 48, 48);
+      const pos = geom.attributes.position;
+      const v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i);
+        const noise = (Math.random() - 0.5) * 0.08;
+        v.multiplyScalar(1 + noise);
+        pos.setXYZ(i, v.x, v.y, v.z);
+      }
+      pos.needsUpdate = true;
+      geom.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({
+        color,
+        roughness: 0.9,
+        metalness: 0.03
+      });
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.scale.y = 0.92;
+      return mesh;
+    }
+
+    function decorateScoop(mesh, flavorName) {
+      const surfaceR = 1.1;
+      const lower = flavorName.toLowerCase();
+
+      function addBits(count, geomFactory, color) {
+        const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.05 });
+        for (let i = 0; i < count; i++) {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI * 0.8;
+          const r = surfaceR * (0.96 + Math.random() * 0.05);
+          const x = r * Math.sin(phi) * Math.cos(theta);
+          const z = r * Math.sin(phi) * Math.sin(theta);
+          const y = r * Math.cos(phi);
+          const bit = new THREE.Mesh(geomFactory(), mat);
+          bit.position.set(x, y, z);
+          bit.rotation.set(Math.random(), Math.random(), Math.random());
+          mesh.add(bit);
+        }
+      }
+
+      function applyPalette(palette) {
+        const geom = mesh.geometry;
+        const count = geom.attributes.position.count;
+        const colors = new Float32Array(count * 3);
+        const c = new THREE.Color();
+        for (let i = 0; i < count; i++) {
+          c.setHex(palette[Math.floor(Math.random() * palette.length)]);
+          colors[i * 3] = c.r;
+          colors[i * 3 + 1] = c.g;
+          colors[i * 3 + 2] = c.b;
+        }
+        geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        mesh.material = mesh.material.clone();
+        mesh.material.vertexColors = true;
+      }
+
+      if (lower.includes("cookies and cream")) {
+        addBits(26, () => new THREE.BoxGeometry(0.16, 0.12, 0.16), 0x1c1c1c);
+      }
+      if (lower.includes("pistachio")) {
+        addBits(24, () => new THREE.SphereGeometry(0.08, 10, 10), 0xc5a85b);
+      }
+      if (lower.includes("rocky road")) {
+        addBits(14, () => new THREE.CylinderGeometry(0.12, 0.12, 0.16, 8), 0xfdfbf7); // marshmallows
+        addBits(18, () => new THREE.BoxGeometry(0.12, 0.1, 0.12), 0x2b1b0f);          // chips
+      }
+      if (lower.includes("pineapple coconut")) {
+        addBits(22, () => new THREE.BoxGeometry(0.1, 0.08, 0.12), 0xfdfbf7);
+      }
+      if (lower.includes("mint chip")) {
+        addBits(26, () => new THREE.BoxGeometry(0.10, 0.05, 0.14), 0x0f0f0f);
+      }
+      if (lower.includes("cookie dough")) {
+        addBits(18, () => new THREE.BoxGeometry(0.18, 0.14, 0.18), 0x8b5a2b);
+      }
+      if (lower.includes("rainbow sherbet")) {
+        applyPalette([0xffc34d, 0xff8fb1, 0x7be4a3, 0xf7f6a5]);
+      }
+      if (lower.includes("mango")) {
+        applyPalette([0xf7c56a, 0xffd27f, 0xf5b74c]);
+      }
+    }
+
+    function addToppings(group, topping, topY) {
+      if (topping === "Sprinkles") {
+        for (let i = 0; i < 60; i++) {
+          const sprGeom = new THREE.CylinderGeometry(0.03, 0.03, 0.16, 8);
+          const sprMat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+          const s = new THREE.Mesh(sprGeom, sprMat);
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI * 0.7;
+          const r = 1.1 + 0.05;
+          s.position.set(
+            r * Math.sin(phi) * Math.cos(theta),
+            topY + r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+          );
+          s.rotation.set(Math.random() * 2, Math.random() * 2, Math.random() * 2);
+          group.add(s);
+        }
+      }
+      if (topping === "Oreo Crumbles") {
+        for (let i = 0; i < 25; i++) {
+          const cGeom = new THREE.BoxGeometry(0.16, 0.08, 0.16);
+          const cMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2b });
+          const c = new THREE.Mesh(cGeom, cMat);
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI * 0.7;
+          const r = 1.1 + 0.02;
+          c.position.set(
+            r * Math.sin(phi) * Math.cos(theta),
+            topY + r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+          );
+          group.add(c);
+        }
+      }
+      if (topping === "Cherries") {
+        const cherryGeom = new THREE.SphereGeometry(0.2, 20, 20);
+        const cherryMat = new THREE.MeshStandardMaterial({ color: 0xc11b2b });
+        const cherry = new THREE.Mesh(cherryGeom, cherryMat);
+        cherry.position.set(0.05, topY + 1.3, 0.02);
+        group.add(cherry);
+      }
+      if (topping === "Whipped Cream") {
+        const creamMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65 });
+        let y = topY + 0.9;
+        for (let i = 0; i < 3; i++) {
+          const r = 0.5 - i * 0.12;
+          const torusGeom = new THREE.TorusGeometry(r, 0.08, 12, 40);
+          const ring = new THREE.Mesh(torusGeom, creamMat);
+          ring.position.y = y;
+          ring.rotation.x = Math.PI / 2;
+          group.add(ring);
+          y += 0.16;
+        }
+      }
+      if (topping === "Hot Fudge") {
+        const fudgeMat = new THREE.MeshStandardMaterial({ color: 0x2f1307, roughness: 0.3, metalness: 0.08 });
+        const shellGeom = new THREE.SphereGeometry(1.18, 40, 32, 0, Math.PI * 2, 0, Math.PI * 0.65);
+        const shell = new THREE.Mesh(shellGeom, fudgeMat);
+        shell.position.y = topY + 0.1;
+        shell.scale.y = 0.95;
+        group.add(shell);
+      }
+      if (topping === "Caramel") {
+        const carMat = new THREE.MeshStandardMaterial({ color: 0xd7a86e, roughness: 0.35, metalness: 0.05 });
+        const rings = [
+          { r: 1.15, y: topY + 0.35 },
+          { r: 1.12, y: topY + 0.15 },
+          { r: 1.1, y: topY - 0.05 }
+        ];
+        rings.forEach(r => {
+          const g = new THREE.TorusGeometry(r.r, 0.1, 16, 70);
+          const m = new THREE.Mesh(g, carMat);
+          m.position.y = r.y;
+          m.rotation.x = Math.PI / 2;
+          m.rotation.z = (Math.random() - 0.5) * 0.25;
+          group.add(m);
+        });
+      }
+      if (topping === "M&Ms") {
+        for (let i = 0; i < 35; i++) {
+          const g = new THREE.SphereGeometry(0.08, 16, 16);
+          const m = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff, roughness: 0.4 });
+          const c = new THREE.Mesh(g, m);
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI * 0.7;
+          const r = 1.1 + 0.03;
+          c.position.set(
+            r * Math.sin(phi) * Math.cos(theta),
+            topY + r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+          );
+          group.add(c);
+        }
+      }
+      if (topping === "Chocolate Chips") {
+        for (let i = 0; i < 30; i++) {
+          const g = new THREE.BoxGeometry(0.1, 0.08, 0.12);
+          const m = new THREE.MeshStandardMaterial({ color: 0x2b1b0f, roughness: 0.5 });
+          const c = new THREE.Mesh(g, m);
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI * 0.7;
+          const r = 1.1 + 0.04;
+          c.position.set(
+            r * Math.sin(phi) * Math.cos(theta),
+            topY + r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+          );
+          c.rotation.set(Math.random(), Math.random(), Math.random());
+          group.add(c);
+        }
+      }
+      if (topping === "Marshmallows") {
+        for (let i = 0; i < 12; i++) {
+          const g = new THREE.CylinderGeometry(0.18, 0.18, 0.2, 10);
+          const m = new THREE.MeshStandardMaterial({ color: 0xfdfbf7, roughness: 0.7 });
+          const c = new THREE.Mesh(g, m);
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI * 0.7;
+          const r = 1.1 + 0.02;
+          c.position.set(
+            r * Math.sin(phi) * Math.cos(theta),
+            topY + r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+          );
+          c.rotation.set(Math.random(), Math.random(), Math.random());
+          group.add(c);
+        }
+      }
+    }
+
+    function buildScene(flavor, forcedToppings = [], answersParam = null) {
+      if (!aiCanvas || typeof THREE === "undefined") return;
+      const w = aiCanvas.clientWidth || (aiCanvas.parentElement && aiCanvas.parentElement.clientWidth) || 500;
+      const h = aiCanvas.clientHeight || 340;
+      if (!aiRenderer) {
+        aiRenderer = new THREE.WebGLRenderer({ canvas: aiCanvas, antialias: true });
+        aiCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+        aiCamera.position.set(0, 1.6, 5);
+        aiControls = new THREE.OrbitControls(aiCamera, aiRenderer.domElement);
+        aiControls.enableDamping = true;
+        aiControls.autoRotate = true;
+        aiControls.autoRotateSpeed = 0.6;
+      }
+      aiRenderer.setSize(w, h, false);
+      aiCamera.aspect = w / h;
+      aiCamera.updateProjectionMatrix();
+
+      if (aiAnim) cancelAnimationFrame(aiAnim);
+      aiScene = new THREE.Scene();
+      aiScene.background = new THREE.Color(0x0f0f0f);
+
+      const hemi = new THREE.HemisphereLight(0xfff4e0, 0x222233, 0.9);
+      aiScene.add(hemi);
+      const dir = new THREE.DirectionalLight(0xffffff, 1.1);
+      dir.position.set(3, 5, 4);
+      aiScene.add(dir);
+
+      const baseGroup = new THREE.Group();
+      let baseTopY = 0;
+      const answerCtx = answersParam || lastAnswers || {};
+      const baseType = resolveBase(answerCtx.base, flavor.base);
+      if (baseType === "Waffle Cone" || baseType === "Sugar Cone") {
+        const radius = baseType === "Sugar Cone" ? 0.7 : 1.05;
+        const height = baseType === "Sugar Cone" ? 2.2 : 2.7;
+        const color = baseType === "Sugar Cone" ? 0xe0b06b : 0xb06d2b;
+        const texture = baseType === "Sugar Cone" ? sugarTexture : waffleTexture;
+        const coneGeom = new THREE.ConeGeometry(radius, height, 50);
+        const coneMat = new THREE.MeshStandardMaterial({
+          color,
+          map: texture,
+          roughness: 0.78,
+          metalness: 0.05
+        });
+        const cone = new THREE.Mesh(coneGeom, coneMat);
+        cone.rotation.x = Math.PI;
+        cone.position.y = -0.8;
+        baseGroup.add(cone);
+        baseTopY = 0.2;
+      } else if (baseType === "Waffle Bowl") {
+        const bowlHeight = 1.6;
+        const outerGeom = new THREE.CylinderGeometry(1.45, 1.25, bowlHeight, 40, 1, true);
+        const innerGeom = new THREE.CylinderGeometry(1.2, 1.05, bowlHeight * 0.96, 40, 1, true);
+        const bottomGeom = new THREE.CircleGeometry(1.15, 40);
+        const bowlMat = new THREE.MeshStandardMaterial({
+          color: 0xb26f2d,
+          map: waffleTexture,
+          roughness: 0.82,
+          metalness: 0.04
+        });
+        const outer = new THREE.Mesh(outerGeom, bowlMat);
+        const inner = new THREE.Mesh(innerGeom, bowlMat.clone());
+        inner.material.side = THREE.BackSide;
+        inner.scale.set(0.99, 0.99, 0.99);
+        const bottom = new THREE.Mesh(bottomGeom, bowlMat);
+        bottom.rotation.x = -Math.PI / 2;
+        bottom.position.y = -bowlHeight / 2;
+        baseGroup.add(outer, inner, bottom);
+        baseGroup.position.y = -0.5;
+        baseTopY = -0.3;
+      } else {
+        const cupHeight = 1.4;
+        const outerGeom = new THREE.CylinderGeometry(1.45, 1.25, cupHeight, 40, 1, true);
+        const innerGeom = new THREE.CylinderGeometry(1.2, 1.05, cupHeight * 0.96, 40, 1, true);
+        const bottomGeom = new THREE.CircleGeometry(1.15, 40);
+        const cupMat = new THREE.MeshStandardMaterial({
+          color: 0xf2f1ee,
+          map: cupTexture,
+          roughness: 0.3,
+          metalness: 0.08
+        });
+        const outer = new THREE.Mesh(outerGeom, cupMat);
+        const inner = new THREE.Mesh(innerGeom, cupMat.clone());
+        inner.material.side = THREE.BackSide;
+        inner.scale.set(0.99, 0.99, 0.99);
+        const bottom = new THREE.Mesh(bottomGeom, cupMat);
+        bottom.rotation.x = -Math.PI / 2;
+        bottom.position.y = -cupHeight / 2;
+        baseGroup.add(outer, inner, bottom);
+        baseGroup.position.y = -0.5;
+        baseTopY = -0.2;
+      }
+      aiScene.add(baseGroup);
+
+      const scoops = [];
+      const scoopsCount = answerCtx.scoops || flavor.scoops || 1;
+      for (let i = 0; i < scoopsCount; i++) {
+        const color = flavorToColor(flavor.name);
+        const scoop = createScoop(color);
+        scoop.position.y = baseTopY + 1 + i * 1.1;
+        decorateScoop(scoop, flavor.name);
+        scoops.push(scoop);
+        aiScene.add(scoop);
+      }
+
+      const toppingList = forcedToppings !== null ? forcedToppings : pickToppings(lastAnswers || {}, flavor.toppings || []);
+      toppingList
+        .filter(t => allowedToppings.includes(t))
+        .forEach(t => addToppings(aiScene, t, scoops[scoops.length - 1].position.y));
+
+      aiControls.target.set(0, baseTopY + 1, 0);
+
+      function animate() {
+        aiAnim = requestAnimationFrame(animate);
+        aiControls.update();
+        aiRenderer.render(aiScene, aiCamera);
+      }
+      animate();
+    }
+
+    function renderFlavor3D(flavor, answers = {}, toppingsOverride = []) {
+      if (typeof THREE === "undefined") {
+        console.warn("THREE not loaded; skipping render");
+        return;
+      }
+      if (!aiCanvas) {
+        console.warn("Canvas not found for AI render");
+        return;
+      }
+      buildScene(flavor, toppingsOverride, answers);
+      lastAnswers = answers;
+    }
+
+    window.addEventListener("resize", () => {
+      if (!aiRenderer || !aiCamera) return;
+      const w = aiCanvas.clientWidth || (aiCanvas.parentElement && aiCanvas.parentElement.clientWidth) || 400;
+      const h = aiCanvas.clientHeight || 340;
+      aiCamera.aspect = w / h;
+      aiCamera.updateProjectionMatrix();
+      aiRenderer.setSize(w, h, false);
+    });
+  </script>
+</body>
+</html>

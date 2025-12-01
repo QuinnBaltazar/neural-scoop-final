@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Your Flavor Profile – Neural Scoop</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="menu.html">Menu</a>
+      <a href="data.html">Data</a>
+      <a href="recommend.html">AI Flavor Maker</a>
+      <a href="maker.html">Ice Cream Maker</a>
+      <a href="profile.html" class="active">Your Flavor Profile</a>
+    </nav>
+  </header>
+
+  <section class="page-header">
+    <h1>Your Flavor Profile</h1>
+    <p>See the flavors, bases, and toppings you keep coming back to.</p>
+  </section>
+
+  <main class="profile-layout">
+    <section class="profile-card">
+      <h2>Flavor Snapshot</h2>
+      <p>Built from your recent cart selections across the site.</p>
+      <div class="profile-leaderboard-grid">
+        <div class="profile-leaderboard-card">
+          <div class="profile-card-heading">
+            <p class="profile-label">Flavor leaderboard</p>
+            <span class="profile-sub">Top 5</span>
+          </div>
+          <ol id="profile-flavor-board" class="profile-leaderboard"></ol>
+        </div>
+        <div class="profile-leaderboard-card">
+          <div class="profile-card-heading">
+            <p class="profile-label">Base leaderboard</p>
+            <span class="profile-sub">Top 5</span>
+          </div>
+          <ol id="profile-base-board" class="profile-leaderboard"></ol>
+        </div>
+        <div class="profile-leaderboard-card">
+          <div class="profile-card-heading">
+            <p class="profile-label">Topping leaderboard</p>
+            <span class="profile-sub">Top 5</span>
+          </div>
+          <ol id="profile-topping-board" class="profile-leaderboard"></ol>
+        </div>
+      </div>
+      <p class="profile-hint">Tip: Add cones from Menu, AI Maker, or the 3D Maker to refresh these stats.</p>
+    </section>
+
+    <section class="profile-card">
+      <h2>Saved Survey Preferences</h2>
+      <p>Pulled from the Flavor Data Survey.</p>
+      <dl id="profile-survey" class="profile-details"></dl>
+    </section>
+
+    <section class="profile-card">
+      <h2>Survey History</h2>
+      <p>Last few entries stored locally so the AI can learn.</p>
+      <div id="profile-history" class="profile-history"></div>
+    </section>
+
+    <section class="profile-card profile-actions">
+      <div class="profile-actions-grid">
+        <a class="shop-primary" href="menu.html">Add new icecream</a>
+        <a class="menu-add" href="recommend.html">Use the AI Maker</a>
+        <a class="menu-add" href="data.html">Update survey</a>
+        <button id="profile-clear" class="menu-add" type="button">Reset profile data</button>
+      </div>
+      <p id="profile-status" class="profile-status" aria-live="polite"></p>
+      <p class="profile-hint">Reset clears your saved survey, stats, and history stored in this browser.</p>
+    </section>
+  </main>
+
+  <script src="shop.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const surveyKey = "ns_survey_prefs";
+      const surveyHistoryKey = "ns_survey_history";
+      const flavorKey = "ns_flavor_history";
+      const baseKey = "ns_base_history";
+      const toppingKey = "ns_topping_history";
+
+      const parseJSON = (key, fallback) => {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch (e) {
+          return fallback;
+        }
+      };
+
+      const topEntries = (map = {}, limit = 5) =>
+        Object.entries(map)
+          .map(([name, count]) => [name, Number(count) || 0])
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, limit);
+
+      function renderLeaderboard(elId, entries, placeholderLabel, placeholderCount) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+
+        const normalized = entries
+          .map(([name, count]) => ({ name, count: Number(count) || 0, empty: false }))
+          .slice(0, 5);
+
+        while (normalized.length < 5) {
+          normalized.push({ name: placeholderLabel, count: 0, empty: true });
+        }
+
+        el.innerHTML = normalized
+          .map((entry, idx) => {
+            const countLabel = entry.empty
+              ? placeholderCount
+              : `${entry.count} ${entry.count === 1 ? "order" : "orders"}`;
+            return `
+              <li class="profile-rank${entry.empty ? " profile-rank-empty" : ""}">
+                <div class="profile-rank-number">${idx + 1}</div>
+                <div class="profile-rank-body">
+                  <span class="profile-rank-name">${entry.name}</span>
+                  <span class="profile-rank-count">${countLabel}</span>
+                </div>
+              </li>
+            `;
+          })
+          .join("");
+      }
+
+      function renderSnapshot() {
+        const stats =
+          (window.getPreferenceStats && window.getPreferenceStats()) || {
+            flavors: parseJSON(flavorKey, {}),
+            bases: parseJSON(baseKey, {}),
+            toppings: parseJSON(toppingKey, {})
+          };
+
+        renderLeaderboard(
+          "profile-flavor-board",
+          topEntries(stats.flavors, 5),
+          "Add a flavor to claim this spot",
+          "Waiting for flavor data"
+        );
+        renderLeaderboard(
+          "profile-base-board",
+          topEntries(stats.bases, 5),
+          "Choose a base to claim this spot",
+          "No base history yet"
+        );
+        renderLeaderboard(
+          "profile-topping-board",
+          topEntries(stats.toppings, 5),
+          "Add toppings to claim this spot",
+          "No topping history yet"
+        );
+      }
+
+      function renderSurvey() {
+        const survey = parseJSON(surveyKey, null);
+        const target = document.getElementById("profile-survey");
+        if (!target) return;
+        if (!survey) {
+          target.innerHTML = '<p class="profile-empty">Save the Data survey to populate this section.</p>';
+          return;
+        }
+        const fields = [
+          ["Favorite family", survey.favorite || "Not set"],
+          ["Menu pick", survey.menuFlavor || "None selected"],
+          ["Base", survey.base || "No base saved"],
+          ["Toppings", (survey.toppings || []).join(", ") || "None"],
+          ["Sweetness", survey.sweet || "Balanced"],
+          ["Texture", survey.texture || "Smooth"],
+          ["Notes", survey.favoriteText || survey.notes || "No notes saved"]
+        ];
+        target.innerHTML = fields
+          .map(
+            ([label, value]) => `
+            <div class="profile-detail">
+              <dt>${label}</dt>
+              <dd>${value}</dd>
+            </div>
+          `
+          )
+          .join("");
+      }
+
+      function renderHistory() {
+        const history = parseJSON(surveyHistoryKey, []);
+        const target = document.getElementById("profile-history");
+        if (!target) return;
+        if (!history.length) {
+          target.innerHTML = '<p class="profile-empty">No survey history yet.</p>';
+          return;
+        }
+        const recent = history.slice(-5).reverse();
+        target.innerHTML = recent
+          .map(entry => {
+            const date = new Date(entry.ts || Date.now()).toLocaleString();
+            const toppings = (entry.toppings || []).join(", ") || "None";
+            const detail = entry.favoriteText || entry.notes || "";
+            return `
+            <div class="profile-history-item">
+              <div class="profile-history-top">
+                <strong>${entry.favorite || "Classic"}</strong>
+                <span class="profile-date">${date}</span>
+              </div>
+              <div class="profile-tag-row">
+                <span>${entry.base || "cone"}</span>
+                <span>${entry.sweet || "med"} sweet</span>
+                <span>${entry.texture || "smooth"}</span>
+              </div>
+              <div class="profile-note">${detail}</div>
+              <div class="profile-toppings">Toppings: ${toppings}</div>
+            </div>`;
+          })
+          .join("");
+      }
+
+      function wireReset() {
+        const btn = document.getElementById("profile-clear");
+        const status = document.getElementById("profile-status");
+        if (!btn) return;
+        btn.addEventListener("click", () => {
+          [surveyKey, surveyHistoryKey, flavorKey, baseKey, toppingKey].forEach(key => {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              // ignore
+            }
+          });
+          renderSnapshot();
+          renderSurvey();
+          renderHistory();
+          if (status) {
+            status.textContent = "Cleared local profile data. Add new icecream to rebuild it.";
+            setTimeout(() => (status.textContent = ""), 3200);
+          }
+        });
+      }
+
+      renderSnapshot();
+      renderSurvey();
+      renderHistory();
+      wireReset();
+    });
+  </script>
+</body>
+</html>

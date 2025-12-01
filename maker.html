@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ice Cream Maker – Neural Scoop</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Local Three.js and OrbitControls (saved in the same folder as this file) -->
+  <script src="three.min.js"></script>
+  <script src="OrbitControls.js"></script>
+</head>
+
+<body>
+  <!-- Simple top nav to match the rest of your site -->
+  <header class="navbar">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="menu.html">Menu</a>
+      <a href="data.html">Data</a>
+      <a href="recommend.html">AI Flavor Maker</a>
+      <a href="maker.html" class="active">Ice Cream Maker</a>
+      <a href="profile.html">Your Flavor Profile</a>
+    </nav>
+  </header>
+
+  <section class="page-header">
+    <h1>Create Your Custom Ice Cream</h1>
+    <p>Choose your cone, scoops, and toppings — then see a 3D render of it.</p>
+  </section>
+
+  <!-- =========== MAIN BUILDER LAYOUT =========== -->
+  <section class="builder-layout">
+
+    <!-- LEFT: Controls -->
+    <div class="builder-controls">
+      <h2>Your Selections</h2>
+
+      <label>
+        Ice Cream Base:
+        <select id="base-select">
+          <option>Waffle Cone</option>
+          <option>Sugar Cone</option>
+          <option>Waffle Bowl</option>
+          <option>Cup</option>
+        </select>
+      </label>
+
+      <label>
+        Scoop 1:
+        <select id="flavor1-select">
+          <option>Vanilla</option>
+          <option>Chocolate</option>
+          <option>Strawberry</option>
+          <option>Mint Chip</option>
+          <option>Cookie Dough</option>
+          <option>Weekly Special</option>
+          <option>Rainbow Sherbet</option>
+          <option>Rocky Road</option>
+          <option>Mango</option>
+          <option>Cookies & Cream</option>
+          <option>Pistachio</option>
+          <option>Pineapple Coconut</option>
+        </select>
+      </label>
+
+      <label>
+        Scoop 2 (optional):
+        <select id="flavor2-select">
+          <option value="">None</option>
+          <option>Vanilla</option>
+          <option>Chocolate</option>
+          <option>Strawberry</option>
+          <option>Mint Chip</option>
+          <option>Cookie Dough</option>
+          <option>Weekly Special</option>
+          <option>Rainbow Sherbet</option>
+          <option>Rocky Road</option>
+          <option>Mango</option>
+          <option>Cookies & Cream</option>
+          <option>Pistachio</option>
+          <option>Pineapple Coconut</option>
+        </select>
+      </label>
+
+      <fieldset class="builder-fieldset">
+        <legend>Toppings ($0.50 ea)</legend>
+        <label><input type="checkbox" class="topping" value="Sprinkles" /> Sprinkles</label>
+        <label><input type="checkbox" class="topping" value="Hot Fudge" /> Hot Fudge</label>
+        <label><input type="checkbox" class="topping" value="Whipped Cream" /> Whipped Cream</label>
+        <label><input type="checkbox" class="topping" value="Cherries" /> Cherries</label>
+        <label><input type="checkbox" class="topping" value="Oreo Crumbles" /> Oreo Crumbles</label>
+        <!-- NEW TOPPINGS -->
+        <label><input type="checkbox" class="topping" value="Caramel Drizzle" /> Caramel Drizzle</label>
+        <label><input type="checkbox" class="topping" value="Peanuts" /> Crushed Peanuts</label>
+        <label><input type="checkbox" class="topping" value="Marshmallows" /> Mini Marshmallows</label>
+      </fieldset>
+
+      <label>
+        Special Notes:
+        <textarea id="notes-input" rows="3" placeholder="Add allergies, changes, etc..."></textarea>
+      </label>
+    </div>
+
+    <!-- RIGHT: Text preview + 3D button -->
+    <div class="builder-preview">
+      <div class="builder-card">
+        <h2>Preview</h2>
+        <p><strong>Base:</strong> <span id="preview-base"></span></p>
+        <p><strong>Scoops:</strong> <span id="preview-scoops"></span></p>
+        <p><strong>Toppings:</strong> <span id="preview-toppings"></span></p>
+        <p><strong>Notes:</strong> <span id="preview-notes"></span></p>
+      </div>
+
+      <div class="builder-card builder-price">
+        <h3>Estimated Price</h3>
+        <p id="preview-price"></p>
+        <small>(for demo only — not a real checkout)</small>
+      </div>
+
+      <button id="open-ar" class="ar-btn">View 3D Ice Cream</button>
+    </div>
+  </section>
+
+  <!-- =========== JS: Preview + 3D viewer =========== -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // If THREE still doesn't exist, bail early with a clear message
+      if (typeof THREE === "undefined") {
+        alert("3D view unavailable: Three.js failed to load. Check three.min.js and OrbitControls.js paths.");
+        console.error("THREE is undefined. three.min.js not loaded.");
+        return;
+      }
+
+      // === form elements ===
+      const baseSelect = document.getElementById("base-select");
+      const flavor1Select = document.getElementById("flavor1-select");
+      const flavor2Select = document.getElementById("flavor2-select");
+      const toppingCheckboxes = document.querySelectorAll(".topping");
+      const notesInput = document.getElementById("notes-input");
+
+      // === preview elements ===
+      const previewBase = document.getElementById("preview-base");
+      const previewScoops = document.getElementById("preview-scoops");
+      const previewToppings = document.getElementById("preview-toppings");
+      const previewNotes = document.getElementById("preview-notes");
+      const previewPrice = document.getElementById("preview-price");
+
+      function updatePreview() {
+        previewBase.textContent = baseSelect.value;
+
+        const scoops = [flavor1Select.value];
+        if (flavor2Select.value) scoops.push(flavor2Select.value);
+        previewScoops.textContent = scoops.join(", ");
+
+        const toppings = [];
+        toppingCheckboxes.forEach(cb => cb.checked && toppings.push(cb.value));
+        previewToppings.textContent = toppings.length ? toppings.join(", ") : "None";
+
+        previewNotes.textContent = notesInput.value || "—";
+
+        let price = 3.50;
+        if (flavor2Select.value) price += 1.25;
+        price += toppings.length * 0.50;
+        previewPrice.textContent = `$${price.toFixed(2)}`;
+      }
+
+      [baseSelect, flavor1Select, flavor2Select, notesInput].forEach(el =>
+        el.addEventListener("input", updatePreview)
+      );
+      toppingCheckboxes.forEach(cb =>
+        cb.addEventListener("change", updatePreview)
+      );
+      updatePreview();
+
+      // ========== 3D VIEWER SETUP ==========
+      const openAR = document.getElementById("open-ar");
+
+      // overlay container for 3D
+      const overlay = document.createElement("div");
+      overlay.id = "ar-overlay";
+      overlay.style.position = "fixed";
+      overlay.style.inset = 0;
+      overlay.style.background = "#000";
+      overlay.style.display = "none";
+      overlay.style.zIndex = "9999";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      document.body.appendChild(overlay);
+
+      // close button
+      const closeBtn = document.createElement("button");
+      closeBtn.id = "close-ar";
+      closeBtn.textContent = "Close";
+      closeBtn.style.position = "absolute";
+      closeBtn.style.top = "20px";
+      closeBtn.style.right = "20px";
+      closeBtn.style.padding = "8px 14px";
+      closeBtn.style.borderRadius = "999px";
+      closeBtn.style.border = "none";
+      closeBtn.style.fontWeight = "600";
+      closeBtn.style.background = "rgba(255,255,255,0.2)";
+      closeBtn.style.color = "#fff";
+      overlay.appendChild(closeBtn);
+
+      // canvas for three.js
+      const canvas = document.createElement("canvas");
+      canvas.id = "three-canvas";
+      overlay.appendChild(canvas);
+
+      let renderer, scene, camera, animationId;
+
+      // === small procedural textures to avoid external assets ===
+      function createWaffleTexture({ base = "#b5732f", lines = "#dca766", spacing = 12 }) {
+        const size = 128;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = base;
+        ctx.fillRect(0, 0, size, size);
+        ctx.strokeStyle = lines;
+        ctx.lineWidth = 4;
+
+        for (let x = -spacing; x < size + spacing; x += spacing) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x + size, size);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(x + spacing / 2, 0);
+          ctx.lineTo(x + spacing / 2 - size, size);
+          ctx.stroke();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(3, 3);
+        return texture;
+      }
+
+      function createStripedCupTexture() {
+        const size = 128;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#f8f8f6";
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = "#d8d8d5";
+
+        for (let x = 0; x < size; x += 14) {
+          ctx.fillRect(x, 0, 6, size);
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(2.5, 1.5);
+        return texture;
+      }
+
+      const waffleTexture = createWaffleTexture({ base: "#9a5b22", lines: "#d19c63", spacing: 10 });
+      const sugarTexture = createWaffleTexture({ base: "#c68c44", lines: "#ebc78e", spacing: 14 });
+      const cupTexture = createStripedCupTexture();
+
+      // ==== NEW FLAVORS WIRED TO COLORS ====
+      function flavorToColor(flavor) {
+        const map = {
+          "Vanilla": 0xf9ead1,
+          "Chocolate": 0x6b4226,
+          "Strawberry": 0xf7a0b2,
+          "Mint Chip": 0x85e0b6,
+          "Cookie Dough": 0xf5d5a4,
+          "Weekly Special": 0x4c7bff,
+          "Rainbow Sherbet": 0xffc4b2,      // pastel orange/pink
+          "Rocky Road": 0x4e2b1f,          // deep chocolate
+          "Mango": 0xffc04d,               // bright mango
+          "Cookies & Cream": 0xeeeae6,     // off-white with gray tone
+          "Pistachio": 0xc2f0a3,           // pale green
+          "Pineapple Coconut": 0xfdf3c1    // light yellow-cream
+        };
+        return map[flavor] || 0xffffff;
+      }
+
+      function buildScene() {
+        // clean up old scene if re-opened
+        if (animationId) cancelAnimationFrame(animationId);
+        if (renderer) {
+          renderer.dispose();
+        }
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+        camera.position.set(0, 2.2, 6);
+        camera.lookAt(0, 1, 0);
+
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(w, h);
+
+        // ===== LIGHTING =====
+        const hemi = new THREE.HemisphereLight(0xfff4e0, 0x222233, 0.9);
+        hemi.position.set(0, 4, 0);
+        scene.add(hemi);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        keyLight.position.set(3, 5, 4);
+        scene.add(keyLight);
+
+        const rimLight = new THREE.DirectionalLight(0xfff0dd, 0.6);
+        rimLight.position.set(-4, 3, -2);
+        scene.add(rimLight);
+
+        // ===== BASE PLATFORM (table) =====
+        const baseGeom = new THREE.CircleGeometry(3.2, 64);
+        const baseMat = new THREE.MeshStandardMaterial({
+          color: 0x2d2d30,
+          roughness: 0.9,
+          metalness: 0.0
+        });
+        const base = new THREE.Mesh(baseGeom, baseMat);
+        base.rotation.x = -Math.PI / 2;
+        base.position.y = -1.8;
+        scene.add(base);
+
+        // ===== BASE TYPE (cone / bowl / cup) =====
+        const baseType = baseSelect.value;
+        let supportMesh;
+        let baseTopY = 0.0;
+
+        if (baseType === "Waffle Cone" || baseType === "Sugar Cone") {
+          const radius = baseType === "Sugar Cone" ? 0.7 : 1.05;
+          const height = baseType === "Sugar Cone" ? 2.2 : 2.7;
+          const color = baseType === "Sugar Cone" ? 0xe0b06b : 0xb06d2b;
+          const texture = baseType === "Sugar Cone" ? sugarTexture : waffleTexture;
+
+          const coneGeom = new THREE.ConeGeometry(radius, height, 50);
+          const coneMat = new THREE.MeshStandardMaterial({
+            color,
+            map: texture,
+            roughness: 0.78,
+            metalness: 0.05
+          });
+          supportMesh = new THREE.Mesh(coneGeom, coneMat);
+          supportMesh.rotation.x = Math.PI;          
+          supportMesh.position.y = -0.8;
+          baseTopY = 0.1;
+        } else if (baseType === "Waffle Bowl") {
+          const bowlGeom = new THREE.CylinderGeometry(1.6, 1.8, 0.9, 50, 1, false);
+          const bowlMat = new THREE.MeshStandardMaterial({
+            color: 0xb26f2d,
+            map: waffleTexture,
+            roughness: 0.82,
+            metalness: 0.04
+          });
+          supportMesh = new THREE.Mesh(bowlGeom, bowlMat);
+          supportMesh.position.y = -0.6;
+          baseTopY = -0.1;
+        } else {
+          // Cup (hollow with thin walls and bottom)
+          const cupHeight = 1.6;
+          const outerGeom = new THREE.CylinderGeometry(1.45, 1.25, cupHeight, 40, 1, true);
+          const innerGeom = new THREE.CylinderGeometry(1.2, 1.05, cupHeight * 0.96, 40, 1, true);
+          const bottomGeom = new THREE.CircleGeometry(1.15, 40);
+
+          const cupMat = new THREE.MeshStandardMaterial({
+            color: 0xf2f1ee,
+            map: cupTexture,
+            roughness: 0.32,
+            metalness: 0.08
+          });
+
+          const cupGroup = new THREE.Group();
+          const outer = new THREE.Mesh(outerGeom, cupMat);
+          const inner = new THREE.Mesh(innerGeom, cupMat);
+          inner.material = inner.material.clone();
+          inner.material.side = THREE.BackSide; 
+          inner.scale.set(0.99, 0.99, 0.99);
+
+          const bottom = new THREE.Mesh(bottomGeom, cupMat);
+          bottom.rotation.x = -Math.PI / 2;
+          bottom.position.y = -cupHeight / 2;
+
+          cupGroup.add(outer);
+          cupGroup.add(inner);
+          cupGroup.add(bottom);
+
+          supportMesh = cupGroup;
+          supportMesh.position.y = -0.5;
+          baseTopY = -0.2;
+        }
+        scene.add(supportMesh);
+
+        // ===== SCOOP CREATOR =====
+        function createScoop(color) {
+          const geom = new THREE.SphereGeometry(1.25, 64, 64);
+          const pos = geom.attributes.position;
+          const v = new THREE.Vector3();
+
+          for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i);
+            const noise = (Math.random() - 0.5) * 0.08;
+            v.multiplyScalar(1 + noise);
+            pos.setXYZ(i, v.x, v.y, v.z);
+          }
+          pos.needsUpdate = true;
+          geom.computeVertexNormals();
+
+          const mat = new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.96,
+            metalness: 0.02
+          });
+
+          const mesh = new THREE.Mesh(geom, mat);
+          mesh.scale.y = 0.9;
+          return mesh;
+        }
+
+        function decorateScoop(mesh, flavor) {
+          const surfaceR = 1.25;
+
+          function placeBits(count, geomFactory, color) {
+            const mat = new THREE.MeshStandardMaterial({
+              color,
+              roughness: 0.8,
+              metalness: 0.05
+            });
+
+            for (let i = 0; i < count; i++) {
+              const theta = Math.random() * Math.PI * 2;
+              const phi = Math.random() * Math.PI * 0.8;
+              const r = surfaceR * (0.96 + Math.random() * 0.05);
+              const x = r * Math.sin(phi) * Math.cos(theta);
+              const z = r * Math.sin(phi) * Math.sin(theta);
+              const y = r * Math.cos(phi);
+
+              const bit = new THREE.Mesh(geomFactory(), mat);
+              bit.position.set(x, y, z);
+              bit.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+              );
+              mesh.add(bit);
+            }
+          }
+
+          if (flavor === "Cookie Dough") {
+            placeBits(
+              18,
+              () => new THREE.BoxGeometry(0.18, 0.14, 0.18),
+              0x8b5a2b
+            );
+          }
+
+          if (flavor === "Mint Chip") {
+            placeBits(
+              26,
+              () => new THREE.BoxGeometry(0.10, 0.05, 0.14),
+              0x0f0f0f
+            );
+          }
+
+          if (flavor === "Cookies & Cream") {
+            placeBits(
+              28,
+              () => new THREE.BoxGeometry(0.14, 0.08, 0.14),
+              0x3b3b3b
+            );
+          }
+
+          if (flavor === "Pineapple Coconut") {
+            placeBits(
+              18,
+              () => new THREE.BoxGeometry(0.1, 0.08, 0.12),
+              0xfdfbf7
+            );
+            // apply subtle green streaks
+            const geom = mesh.geometry;
+            const count = geom.attributes.position.count;
+            const colors = new Float32Array(count * 3);
+            const c = new THREE.Color();
+            for (let i = 0; i < count; i++) {
+              const mix = Math.random();
+              c.setRGB(
+                0.85 - 0.25 * mix,
+                0.95 - 0.35 * mix,
+                0.78 + 0.05 * mix
+              );
+              colors[i * 3] = c.r;
+              colors[i * 3 + 1] = c.g;
+              colors[i * 3 + 2] = c.b;
+            }
+            geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+            mesh.material = mesh.material.clone();
+            mesh.material.vertexColors = true;
+          }
+
+          if (flavor === "Rainbow Sherbet") {
+            // multicolor palette across vertices
+            const palette = [0xffc34d, 0xff8fb1, 0x7be4a3, 0xf7f6a5];
+            const geom = mesh.geometry;
+            const count = geom.attributes.position.count;
+            const colors = new Float32Array(count * 3);
+            const c = new THREE.Color();
+            for (let i = 0; i < count; i++) {
+              c.setHex(palette[Math.floor(Math.random() * palette.length)]);
+              colors[i * 3] = c.r;
+              colors[i * 3 + 1] = c.g;
+              colors[i * 3 + 2] = c.b;
+            }
+            geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+            mesh.material = mesh.material.clone();
+            mesh.material.vertexColors = true;
+          }
+
+          if (flavor === "Rocky Road") {
+            // chocolate chunks
+            placeBits(
+              18,
+              () => new THREE.BoxGeometry(0.16, 0.12, 0.16),
+              0x3b2416
+            );
+            // mini marshmallows
+            placeBits(
+              14,
+              () => new THREE.CylinderGeometry(0.11, 0.11, 0.18, 10),
+              0xfdfbf7
+            );
+          }
+
+          if (flavor === "Pistachio") {
+            placeBits(
+              20,
+              () => new THREE.BoxGeometry(0.12, 0.10, 0.08),
+              0x9fbf60
+            );
+          }
+        }
+
+        // ===== SCOOPS =====
+        const scoop1 = createScoop(flavorToColor(flavor1Select.value));
+        decorateScoop(scoop1, flavor1Select.value);
+        scoop1.position.y = baseTopY + 1.0;
+
+        let scoop2 = null;
+        if (flavor2Select.value) {
+          scoop2 = createScoop(flavorToColor(flavor2Select.value));
+          decorateScoop(scoop2, flavor2Select.value);
+          scoop2.position.y = baseTopY + 2.0;
+        }
+
+        const group = new THREE.Group();
+        group.add(supportMesh);
+        group.add(scoop1);
+        if (scoop2) group.add(scoop2);
+        scene.add(group);
+
+        // ===== TOPPINGS (hug the scoop surface) =====
+        toppingCheckboxes.forEach(cb => {
+          if (!cb.checked) return;
+
+          const val = cb.value;
+
+          const topCenterY = (scoop2 ? scoop2.position.y : scoop1.position.y);
+          const surfaceRadius = 1.25;
+
+          function pointOnScoopShell(extraOffset = 0.02) {
+            const theta = Math.random() * 2 * Math.PI;
+            const phi = Math.random() * Math.PI * 0.75;
+            const r =
+              surfaceRadius *
+              (0.98 + Math.random() * 0.04) +
+              extraOffset;
+
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const z = r * Math.sin(phi) * Math.sin(theta);
+            const y = topCenterY + r * Math.cos(phi);
+            return { x, y, z };
+          }
+
+          if (val === "Sprinkles") {
+            for (let i = 0; i < 80; i++) {
+              const sprinkleGeom = new THREE.CylinderGeometry(0.03, 0.03, 0.18, 8);
+              const sprinkleMat = new THREE.MeshStandardMaterial({
+                color: Math.random() * 0xffffff
+              });
+              const s = new THREE.Mesh(sprinkleGeom, sprinkleMat);
+
+              const p = pointOnScoopShell(0.01);
+              s.position.set(p.x, p.y, p.z);
+              s.rotation.set(
+                Math.random() * 2,
+                Math.random() * 2,
+                Math.random() * 2
+              );
+              group.add(s);
+            }
+          }
+
+          if (val === "Oreo Crumbles") {
+            for (let i = 0; i < 30; i++) {
+              const crumbleGeom = new THREE.BoxGeometry(0.16, 0.08, 0.16);
+              const crumbleMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2b });
+              const c = new THREE.Mesh(crumbleGeom, crumbleMat);
+
+              const p = pointOnScoopShell(0.005);
+              c.position.set(p.x, p.y, p.z);
+              group.add(c);
+            }
+          }
+
+          if (val === "Hot Fudge") {
+            const fudgeMat = new THREE.MeshStandardMaterial({
+              color: 0x2f1307,
+              roughness: 0.28,
+              metalness: 0.08
+            });
+
+            const shellGeom = new THREE.SphereGeometry(
+              surfaceRadius + 0.08,
+              50,
+              40,
+              0,
+              Math.PI * 2,
+              0,
+              Math.PI * 0.65
+            );
+            const pos = shellGeom.attributes.position;
+            const v = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i++) {
+              v.fromBufferAttribute(pos, i);
+              if (v.y < 0) {
+                const cutoff = -0.05 + Math.random() * 0.12;
+                v.y = Math.max(v.y, cutoff);
+              }
+              pos.setXYZ(i, v.x, v.y, v.z);
+            }
+            pos.needsUpdate = true;
+            shellGeom.computeVertexNormals();
+
+            const shell = new THREE.Mesh(shellGeom, fudgeMat);
+            shell.position.y = topCenterY;
+            shell.scale.y = 0.96; 
+            shell.rotation.z = (Math.random() - 0.5) * 0.12;
+            group.add(shell);
+
+            const dripCount = 16;
+            for (let i = 0; i < dripCount; i++) {
+              const theta = Math.random() * Math.PI * 2;
+              const phi = Math.random() * Math.PI * 0.25 + Math.PI * 0.55;
+              const r = surfaceRadius + 0.05;
+              const x = r * Math.sin(phi) * Math.cos(theta);
+              const z = r * Math.sin(phi) * Math.sin(theta);
+              const y = topCenterY + r * Math.cos(phi);
+
+              const dripLen = 0.25 + Math.random() * 0.35;
+              const dripGeom = new THREE.CylinderGeometry(0.07, 0.05, dripLen, 10);
+              const drip = new THREE.Mesh(dripGeom, fudgeMat);
+              drip.position.set(x, y - dripLen / 2 - 0.04, z);
+              drip.rotation.x = (Math.random() - 0.5) * 0.35;
+              drip.rotation.z = (Math.random() - 0.5) * 0.35;
+              group.add(drip);
+
+              const dropGeom = new THREE.SphereGeometry(0.085, 16, 16);
+              const drop = new THREE.Mesh(dropGeom, fudgeMat);
+              drop.position.set(x, y - dripLen - 0.05, z);
+              group.add(drop);
+            }
+          }
+
+          // NEW: CARAMEL
+          if (val === "Caramel") {
+            const caramelMat = new THREE.MeshStandardMaterial({
+              color: 0xc68c3f,
+              roughness: 0.35,
+              metalness: 0.1
+            });
+
+            const hasFudge = Array.from(toppingCheckboxes).some(cb => cb.checked && cb.value === "Hot Fudge");
+
+            if (hasFudge) {
+              const rings = [
+                { r: surfaceRadius + 0.02, y: topCenterY + 0.25 },
+                { r: surfaceRadius + 0.03, y: topCenterY + 0.05 },
+                { r: surfaceRadius + 0.04, y: topCenterY - 0.15 }
+              ];
+              rings.forEach(r => {
+                const g = new THREE.TorusGeometry(r.r, 0.1, 16, 60);
+                const m = new THREE.Mesh(g, caramelMat);
+                m.position.y = r.y;
+                m.rotation.x = Math.PI / 2;
+                m.rotation.z = (Math.random() - 0.5) * 0.2;
+                group.add(m);
+              });
+            } else {
+              const shellGeom = new THREE.SphereGeometry(
+                surfaceRadius + 0.06,
+                44,
+                32,
+                0,
+                Math.PI * 2,
+                0,
+                Math.PI * 0.6
+              );
+              const pos = shellGeom.attributes.position;
+              const v = new THREE.Vector3();
+              for (let i = 0; i < pos.count; i++) {
+                v.fromBufferAttribute(pos, i);
+                if (v.y < -0.05) {
+                  const cutoff = -0.05 + Math.random() * 0.1;
+                  v.y = Math.max(v.y, cutoff);
+                }
+                pos.setXYZ(i, v.x, v.y, v.z);
+              }
+              pos.needsUpdate = true;
+              shellGeom.computeVertexNormals();
+
+              const shell = new THREE.Mesh(shellGeom, caramelMat);
+              shell.position.y = topCenterY + 0.02;
+              shell.scale.y = 0.98;
+              shell.rotation.z = (Math.random() - 0.5) * 0.1;
+              group.add(shell);
+            }
+          }
+
+          if (val === "Whipped Cream") {
+            const creamMat = new THREE.MeshStandardMaterial({
+              color: 0xfdfbf7,
+              roughness: 0.6,
+              metalness: 0.01
+            });
+
+            class SwirlCurve extends THREE.Curve {
+              getPoint(t) {
+                const turns = 4;
+                const angle = t * Math.PI * turns * 2;
+                const radius = THREE.MathUtils.lerp(0.55, 0.15, t);
+                const y = topCenterY + surfaceRadius + 0.05 + t * 0.75;
+                return new THREE.Vector3(
+                  Math.cos(angle) * radius,
+                  y,
+                  Math.sin(angle) * radius
+                );
+              }
+            }
+
+            const swirl = new SwirlCurve();
+            const tubeGeom = new THREE.TubeGeometry(swirl, 180, 0.09, 16, false);
+            const swirlMesh = new THREE.Mesh(tubeGeom, creamMat);
+            group.add(swirlMesh);
+
+            const capGeom = new THREE.SphereGeometry(0.12, 16, 16);
+            const cap = new THREE.Mesh(capGeom, creamMat);
+            const capPoint = swirl.getPoint(1);
+            cap.position.copy(capPoint).y += 0.08;
+            group.add(cap);
+          }
+
+          if (val === "Cherries") {
+            const cherryTopY = topCenterY + surfaceRadius + 0.4;
+
+            const cherryGeom = new THREE.SphereGeometry(0.22, 24, 24);
+            const cherryMat = new THREE.MeshStandardMaterial({
+              color: 0xc11b2b,
+              roughness: 0.4,
+              metalness: 0.25
+            });
+            const cherry = new THREE.Mesh(cherryGeom, cherryMat);
+            cherry.position.set(0.05, cherryTopY, 0.02);
+            group.add(cherry);
+
+            const stemGeom = new THREE.CylinderGeometry(0.03, 0.03, 0.55, 8);
+            const stemMat = new THREE.MeshStandardMaterial({ color: 0x3b5b1b });
+            const stem = new THREE.Mesh(stemGeom, stemMat);
+            stem.position.set(0.05, cherryTopY + 0.3, -0.08);
+            stem.rotation.x = Math.PI / 4;
+            group.add(stem);
+          }
+
+          // NEW: CRUSHED PEANUTS
+          if (val === "Peanuts") {
+            for (let i = 0; i < 26; i++) {
+              const nutGeom = new THREE.BoxGeometry(0.12, 0.09, 0.08);
+              const nutMat = new THREE.MeshStandardMaterial({ color: 0xe0c18a });
+              const n = new THREE.Mesh(nutGeom, nutMat);
+              const p = pointOnScoopShell(0.008);
+              n.position.set(p.x, p.y, p.z);
+              n.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+              );
+              group.add(n);
+            }
+          }
+
+          // NEW: MINI MARSHMALLOWS
+          if (val === "Marshmallows") {
+            for (let i = 0; i < 20; i++) {
+              const marshGeom = new THREE.CylinderGeometry(0.11, 0.11, 0.2, 10);
+              const marshMat = new THREE.MeshStandardMaterial({ color: 0xfdfbf7 });
+              const m = new THREE.Mesh(marshGeom, marshMat);
+
+              const p = pointOnScoopShell(0.015);
+              m.position.set(p.x, p.y, p.z);
+              m.rotation.x = Math.random() * Math.PI;
+              m.rotation.z = Math.random() * Math.PI;
+              group.add(m);
+            }
+          }
+        });
+
+        // ===== ORBIT CONTROLS =====
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+        controls.minDistance = 4;
+        controls.maxDistance = 8;
+        controls.target.set(0, baseTopY + 1.0);
+        controls.update();
+
+        function animate() {
+          animationId = requestAnimationFrame(animate);
+          controls.update();
+          renderer.render(scene, camera);
+        }
+        animate();
+
+        window.onresize = () => {
+          const w2 = window.innerWidth;
+          const h2 = window.innerHeight;
+          camera.aspect = w2 / h2;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w2, h2);
+        }; 
+      }
+
+      openAR.addEventListener("click", () => {
+        overlay.style.display = "flex";
+        buildScene();
+      });
+
+      closeBtn.addEventListener("click", () => {
+        overlay.style.display = "none";
+        if (animationId) cancelAnimationFrame(animationId);
+      });
+    });
+  </script>
+</body>
+</html>
